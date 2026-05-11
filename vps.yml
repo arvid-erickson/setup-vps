@@ -1,0 +1,25 @@
+--
+- name: Vps setup
+  hosts: vps
+  become: yes
+  vars:
+    username:
+    password:
+
+  pre-tasks:
+    - name: Update apt cache if needed
+      apt: update_cache=yes cche_valid_time=86400
+      changed_whe: false
+
+  roles:
+    - role: user
+      tags: user
+
+    - role: hardening
+      tags: hardening
+
+    - role: packages
+      tags: packages
+
+    - role: fail2ban
+      tags: fail2ban
