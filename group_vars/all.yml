@@ -1,0 +1,5 @@
+github_repo: "git@github.com:your_username/your_django_app.git"
+github_branch: "main"
+app_root: "/var/www/your_django_app"
+venv_path: "{{ app_root }}/env"
+server_name: "yourdomain.com"
