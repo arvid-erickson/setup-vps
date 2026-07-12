@@ -1,0 +1,74 @@
+---
+- name: Deploy Django 6 Application
+  hosts: webservers
+  become: true
+  vars:
+    # System & Path configurations
+    project_root: /var/www/my_django_app
+    venv_path: /var/www/my_django_app/venv
+    repo_url: https://github.com
+    repo_branch: main
+    
+    # Django 6 Environment variables
+    django_settings: myproject.settings.production
+    secret_key: "{{ lookup('ansible.builtin.env', 'DJANGO_SECRET_KEY') | default('fallback-insecure-key-for-dev', true) }}"
+
+  tasks:
+    - name: Install system dependencies for Django 6 and Python
+      ansible.builtin.apt:
+        name:
+          - python3-pip
+          - python3-venv
+          - python3-dev
+          - git
+          - libpq-dev  # Required if using PostgreSQL
+        state: present
+        update_cache: true
+
+    - name: Ensure project root directory exists
+      ansible.builtin.file:
+        path: "{{ project_root }}"
+        state: directory
+        mode: '0755'
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Pull latest code from Git repository
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ project_root }}"
+        version: "{{ repo_branch }}"
+        force: true
+      become: false
+
+    - name: Create Python Virtual Environment
+      ansible.builtin.command:
+        cmd: "python3 -m venv {{ venv_path }}"
+        creates: "{{ venv_path }}/bin/activate"
+      become: false
+
+    - name: Install requirements into Virtual Environment
+      ansible.builtin.pip:
+        requirements: "{{ project_root }}/requirements.txt"
+        virtualenv: "{{ venv_path }}"
+      become: false
+
+    - name: Run Django Database Migrations
+      community.general.django_manage:
+        command: migrate
+        project_dir: "{{ project_root }}"
+        virtualenv: "{{ venv_path }}"
+        settings: "{{ django_settings }}"
+      environment:
+        DJANGO_SECRET_KEY: "{{ secret_key }}"
+      become: false
+
+    - name: Collect Django Static Files
+      community.general.django_manage:
+        command: collectstatic
+        project_dir: "{{ project_root }}"
+        virtualenv: "{{ venv_path }}"
+        settings: "{{ django_settings }}"
+      environment:
+        DJANGO_SECRET_KEY: "{{ secret_key }}"
+      become: false
