@@ -23,3 +23,9 @@
 
     - role: fail2ban
       tags: fail2ban
+
+    - role: nginx
+      tags: nginx
+
+    - role: django
+      tags: django
