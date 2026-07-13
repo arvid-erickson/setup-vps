@@ -1,0 +1,14 @@
+[Unit]
+Description=Hypercorn ASGI Server for Django
+After=network.target
+
+[Service]
+User={{ app_user }}
+WorkingDirectory={{ app_dir }}
+ExecStart={{ venv_dir }}/bin/hypercorn --bind 127.0.0.1:8000 your_django_project.asgi:application
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target

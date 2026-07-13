@@ -1,74 +1,75 @@
----
-- name: Deploy Django 6 Application
-  hosts: webservers
-  become: true
+--
+- name: Deploy Django App with Hypercorn
+  hosts: web_servers
+  become: yes
   vars:
-    # System & Path configurations
-    project_root: /var/www/my_django_app
-    venv_path: /var/www/my_django_app/venv
-    repo_url: https://github.com
-    repo_branch: main
-    
-    # Django 6 Environment variables
-    django_settings: myproject.settings.production
-    secret_key: "{{ lookup('ansible.builtin.env', 'DJANGO_SECRET_KEY') | default('fallback-insecure-key-for-dev', true) }}"
+    app_user: "django"
+    app_dir: "/var/www/my_django_app"
+    venv_dir: "/var/www/my_django_app/venv"
+    repo_url: "git@github.com:your-org/my_django_app.git"
+    branch: "main"
 
   tasks:
-    - name: Install system dependencies for Django 6 and Python
+    - name: Install system dependencies
       ansible.builtin.apt:
         name:
           - python3-pip
           - python3-venv
-          - python3-dev
           - git
-          - libpq-dev  # Required if using PostgreSQL
+          - nginx
         state: present
-        update_cache: true
+        update_cache: yes
 
-    - name: Ensure project root directory exists
-      ansible.builtin.file:
-        path: "{{ project_root }}"
-        state: directory
-        mode: '0755'
-        owner: ubuntu
-        group: ubuntu
+    - name: Create application user
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        state: present
+        shell: /bin/bash
 
-    - name: Pull latest code from Git repository
+    - name: Clone repository
       ansible.builtin.git:
         repo: "{{ repo_url }}"
-        dest: "{{ project_root }}"
-        version: "{{ repo_branch }}"
-        force: true
-      become: false
+        dest: "{{ app_dir }}"
+        version: "{{ branch }}"
+        force: yes
+      become_user: "{{ app_user }}"
 
-    - name: Create Python Virtual Environment
-      ansible.builtin.command:
-        cmd: "python3 -m venv {{ venv_path }}"
-        creates: "{{ venv_path }}/bin/activate"
-      become: false
-
-    - name: Install requirements into Virtual Environment
+    - name: Install python requirements
       ansible.builtin.pip:
-        requirements: "{{ project_root }}/requirements.txt"
-        virtualenv: "{{ venv_path }}"
-      become: false
+        requirements: "{{ app_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+        virtualenv_python: python3
+      become_user: "{{ app_user }}"
 
-    - name: Run Django Database Migrations
-      community.general.django_manage:
+    - name: Run Django migrate
+      community.general.django_command:
         command: migrate
-        project_dir: "{{ project_root }}"
-        virtualenv: "{{ venv_path }}"
-        settings: "{{ django_settings }}"
-      environment:
-        DJANGO_SECRET_KEY: "{{ secret_key }}"
-      become: false
+        project_path: "{{ app_dir }}"
+        virtualenv: "{{ venv_dir }}"
+      become_user: "{{ app_user }}"
 
-    - name: Collect Django Static Files
-      community.general.django_manage:
+    - name: Run Django collectstatic
+      community.general.django_command:
         command: collectstatic
-        project_dir: "{{ project_root }}"
-        virtualenv: "{{ venv_path }}"
-        settings: "{{ django_settings }}"
-      environment:
-        DJANGO_SECRET_KEY: "{{ secret_key }}"
-      become: false
+        project_path: "{{ app_dir }}"
+        virtualenv: "{{ venv_dir }}"
+      become_user: "{{ app_user }}"
+
+    - name: Create systemd service for Hypercorn
+      ansible.builtin.template:
+        src: hypercorn.service.j2
+        dest: /etc/systemd/system/hypercorn.service
+      notify:
+        - Restart hypercorn
+
+    - name: Ensure service is started and enabled
+      ansible.builtin.systemd:
+        name: hypercorn.service
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart hypercorn
+      ansible.builtin.systemd:
+        name: hypercorn.service
+        state: restarted
