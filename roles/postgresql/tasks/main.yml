@@ -1,0 +1,16 @@
+reation of databases happens in apps/ on a per-app basis.
+
+- name: Install PostgreSQL
+  apt: name={{ item }} force=yes state=installed
+  with_items:
+    - postgresql
+    - postgresql-contrib
+    - libpq-dev
+    - python-psycopg2
+  tags:
+    - box
+    - packages
+    - postgresql
+
+- name: Ensure the PostgreSQL service is running
+  service: name=postgresql state=started enabled=yes
