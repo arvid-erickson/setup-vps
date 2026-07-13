@@ -27,5 +27,8 @@
     - role: nginx
       tags: nginx
 
+    - role: postgresql
+      tags: postgresql
+
     - role: django
       tags: django
