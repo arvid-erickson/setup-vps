@@ -1,0 +1,49 @@
+server {
+    listen 80;
+    server_name {{ domain_name }};
+
+    # Redirect all HTTP requests to HTTPS
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name {{ domain_name }};
+
+    ssl_certificate     {{ ssl_cert_path }};
+    ssl_certificate_key {{ ssl_key_path }};
+    
+    # Recommended SSL settings
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # Serve Django static files directly
+    location /static/ {
+        alias {{ app_dir }}/static/;
+        expires 30d;
+        access_log off;
+    }
+
+    # Serve Django media files directly
+    location /media/ {
+        alias {{ app_dir }}/media/;
+        expires 30d;
+        access_log off;
+    }
+
+    # Proxy application requests to the WSGI server
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+
+        # Forward crucial headers to Django
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Optional: Disable proxy buffering for streaming responses
+        proxy_buffering off;
+    }
+}
