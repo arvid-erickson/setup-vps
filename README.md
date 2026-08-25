@@ -1,7 +1,7 @@
 # setup-vps
 Ansible playbook to setup and secure a virtual private server
 
-# Ansible Collection - devsec.hardening
+### Ansible Collection - devsec.hardening
 
 [![devsec.os_hardening](https://github.com/dev-sec/ansible-collection-hardening/actions/workflows/os_hardening.yml/badge.svg)](https://github.com/dev-sec/ansible-collection-hardening/actions/workflows/os_hardening.yml)
 [![devsec.ssh_hardening](https://github.com/dev-sec/ansible-collection-hardening/actions/workflows/ssh_hardening.yml/badge.svg)](https://github.com/dev-sec/ansible-collection-hardening/actions/workflows/ssh_hardening.yml)
